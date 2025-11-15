@@ -81,32 +81,61 @@ const BasketBuilder = ({ basketAssets, onBasketChange, onBasketDataLoad }: Baske
             const assetConfig = AVAILABLE_ASSETS.find((a) => a.id === asset.name);
             if (!assetConfig) return { asset, data: [] };
 
-            const response = await fetch(`/data/${assetConfig.file}`);
-            const text = await response.text();
-            const lines = text.trim().split("\n");
-            const headers = lines[0].split(",").map(h => h.trim());
-            
-            const data: AssetData[] = lines.slice(1).map((line) => {
-              const values = line.split(",");
-              const date = values[0].trim();
-              
-              // Check if this is the new format with future predictions
-              if (headers.includes("future_median")) {
-                return {
-                  date,
-                  price_in_btc: parseFloat(values[1].trim()), // future_median
-                  future_p25: parseFloat(values[2].trim()),
-                  future_p75: parseFloat(values[3].trim()),
-                };
-              } else {
-                // Old format with just price_in_btc
-                return {
-                  date,
-                  price_in_btc: parseFloat(values[1].trim()),
-                };
+            const assetData: AssetData[] = [];
+
+            // Load historical data
+            try {
+              const historicalResponse = await fetch(`/data/${asset.name}_historical.csv`);
+              const historicalText = await historicalResponse.text();
+              const historicalLines = historicalText.trim().split("\n");
+
+              for (let i = 1; i < historicalLines.length; i++) {
+                const line = historicalLines[i].trim();
+                if (!line) continue;
+
+                const parts = line.split(",");
+                const price = parseFloat(parts[1]);
+
+                if (!isNaN(price)) {
+                  assetData.push({
+                    date: parts[0],
+                    price_in_btc: price,
+                  });
+                }
               }
-            });
-            return { asset, data };
+            } catch (error) {
+              console.error(`Historical data not found for ${asset.name}`);
+            }
+
+            // Load future predictions
+            try {
+              const futureResponse = await fetch(`/data/${assetConfig.file}`);
+              const futureText = await futureResponse.text();
+              const futureLines = futureText.trim().split("\n");
+
+              for (let i = 1; i < futureLines.length; i++) {
+                const line = futureLines[i].trim();
+                if (!line) continue;
+
+                const [date, median, p25, p75] = line.split(",");
+                const medianVal = parseFloat(median);
+                const p25Val = parseFloat(p25);
+                const p75Val = parseFloat(p75);
+
+                if (!isNaN(medianVal) && !isNaN(p25Val) && !isNaN(p75Val)) {
+                  assetData.push({
+                    date,
+                    price_in_btc: medianVal,
+                    future_p25: p25Val,
+                    future_p75: p75Val,
+                  });
+                }
+              }
+            } catch (error) {
+              console.error(`Future data not found for ${asset.name}`);
+            }
+
+            return { asset, data: assetData };
           })
         );
 
@@ -122,13 +151,35 @@ const BasketBuilder = ({ basketAssets, onBasketChange, onBasketDataLoad }: Baske
         // Calculate weighted portfolio value
         const portfolioData: AssetData[] = commonDates.map((date) => {
           let totalValue = 0;
+          let totalP25 = 0;
+          let totalP75 = 0;
+          let hasConfidenceBands = false;
+
           allData.forEach(({ asset, data }) => {
             const entry = data.find((d) => d.date === date);
             if (entry) {
-              totalValue += entry.price_in_btc * (asset.weight / 100);
+              const weight = asset.weight / 100;
+              totalValue += entry.price_in_btc * weight;
+              
+              if (entry.future_p25 !== undefined && entry.future_p75 !== undefined) {
+                totalP25 += entry.future_p25 * weight;
+                totalP75 += entry.future_p75 * weight;
+                hasConfidenceBands = true;
+              }
             }
           });
-          return { date, price_in_btc: totalValue };
+
+          const result: AssetData = {
+            date,
+            price_in_btc: totalValue,
+          };
+
+          if (hasConfidenceBands) {
+            result.future_p25 = totalP25;
+            result.future_p75 = totalP75;
+          }
+
+          return result;
         });
 
         onBasketDataLoad(portfolioData);
