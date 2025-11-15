@@ -11,6 +11,8 @@ import { useNavigate } from "react-router-dom";
 export interface AssetData {
   date: string;
   price_in_btc: number;
+  future_p25?: number;
+  future_p75?: number;
 }
 
 export interface BasketAsset {
