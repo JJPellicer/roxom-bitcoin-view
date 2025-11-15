@@ -27,12 +27,27 @@ const AssetSelector = ({ selectedAsset, onAssetChange, onDataLoad }: AssetSelect
         const response = await fetch(`/data/${asset.file}`);
         const text = await response.text();
         const lines = text.trim().split("\n");
+        const headers = lines[0].split(",").map(h => h.trim());
+        
         const data: AssetData[] = lines.slice(1).map((line) => {
-          const [date, price] = line.split(",");
-          return {
-            date: date.trim(),
-            price_in_btc: parseFloat(price.trim()),
-          };
+          const values = line.split(",");
+          const date = values[0].trim();
+          
+          // Check if this is the new format with future predictions
+          if (headers.includes("future_median")) {
+            return {
+              date,
+              price_in_btc: parseFloat(values[1].trim()), // future_median
+              future_p25: parseFloat(values[2].trim()),
+              future_p75: parseFloat(values[3].trim()),
+            };
+          } else {
+            // Old format with just price_in_btc
+            return {
+              date,
+              price_in_btc: parseFloat(values[1].trim()),
+            };
+          }
         });
         onDataLoad(data);
       } catch (error) {
