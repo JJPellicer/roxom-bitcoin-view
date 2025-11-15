@@ -24,32 +24,61 @@ const AssetSelector = ({ selectedAsset, onAssetChange, onDataLoad }: AssetSelect
       if (!asset) return;
 
       try {
-        const response = await fetch(`/data/${asset.file}`);
-        const text = await response.text();
-        const lines = text.trim().split("\n");
-        const headers = lines[0].split(",").map(h => h.trim());
+        const allData: AssetData[] = [];
         
-        const data: AssetData[] = lines.slice(1).map((line) => {
-          const values = line.split(",");
-          const date = values[0].trim();
+        // Load historical data
+        try {
+          const historicalResponse = await fetch(`/data/${selectedAsset}_historical.csv`);
+          const historicalText = await historicalResponse.text();
+          const historicalLines = historicalText.trim().split("\n");
           
-          // Check if this is the new format with future predictions
-          if (headers.includes("future_median")) {
-            return {
-              date,
-              price_in_btc: parseFloat(values[1].trim()), // future_median
-              future_p25: parseFloat(values[2].trim()),
-              future_p75: parseFloat(values[3].trim()),
-            };
-          } else {
-            // Old format with just price_in_btc
-            return {
-              date,
-              price_in_btc: parseFloat(values[1].trim()),
-            };
+          for (let i = 1; i < historicalLines.length; i++) {
+            const line = historicalLines[i].trim();
+            if (!line) continue;
+            
+            const parts = line.split(",");
+            const price = parseFloat(parts[1]);
+            
+            if (!isNaN(price)) {
+              allData.push({
+                date: parts[0],
+                price_in_btc: price,
+              });
+            }
           }
-        });
-        onDataLoad(data);
+        } catch (error) {
+          console.error("Historical data not found, continuing with future data only");
+        }
+
+        // Load future predictions
+        try {
+          const futureResponse = await fetch(`/data/${asset.file}`);
+          const futureText = await futureResponse.text();
+          const futureLines = futureText.trim().split("\n");
+
+          for (let i = 1; i < futureLines.length; i++) {
+            const line = futureLines[i].trim();
+            if (!line) continue;
+
+            const [date, median, p25, p75] = line.split(",");
+            const medianVal = parseFloat(median);
+            const p25Val = parseFloat(p25);
+            const p75Val = parseFloat(p75);
+
+            if (!isNaN(medianVal) && !isNaN(p25Val) && !isNaN(p75Val)) {
+              allData.push({
+                date,
+                price_in_btc: medianVal,
+                future_p25: p25Val,
+                future_p75: p75Val,
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Future data not found");
+        }
+
+        onDataLoad(allData);
       } catch (error) {
         console.error("Error loading data:", error);
         onDataLoad([]);

@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import AssetChart from "@/components/AssetChart";
 import AssetSelector from "@/components/AssetSelector";
 import BasketBuilder from "@/components/BasketBuilder";
 import DateSelector from "@/components/DateSelector";
+import DateRangeSelector from "@/components/DateRangeSelector";
 import InsightsPanel from "@/components/InsightsPanel";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
@@ -28,6 +29,32 @@ const Simulator = () => {
   const [basketData, setBasketData] = useState<AssetData[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [isBasketMode, setIsBasketMode] = useState(false);
+  
+  const currentData = isBasketMode ? basketData : assetData;
+  
+  // Get min and max dates from data
+  const { minDate, maxDate } = useMemo(() => {
+    if (currentData.length === 0) return { minDate: "", maxDate: "" };
+    const dates = currentData.map(d => d.date).sort();
+    return { minDate: dates[0], maxDate: dates[dates.length - 1] };
+  }, [currentData]);
+  
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+  
+  // Initialize date range when data loads
+  useMemo(() => {
+    if (minDate && maxDate && !startDate && !endDate) {
+      setStartDate(minDate);
+      setEndDate(maxDate);
+    }
+  }, [minDate, maxDate, startDate, endDate]);
+  
+  // Filter data by date range
+  const filteredData = useMemo(() => {
+    if (!startDate || !endDate) return currentData;
+    return currentData.filter(d => d.date >= startDate && d.date <= endDate);
+  }, [currentData, startDate, endDate]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -84,16 +111,28 @@ const Simulator = () => {
           />
         )}
 
+        {/* Date Range Filter */}
+        {currentData.length > 0 && (
+          <DateRangeSelector
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+            minDate={minDate}
+            maxDate={maxDate}
+          />
+        )}
+
         {/* Chart Section */}
         <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
           <div className="space-y-4">
             <AssetChart
-              data={isBasketMode ? basketData : assetData}
+              data={filteredData}
               assetName={isBasketMode ? "Portfolio" : selectedAsset}
               selectedDate={selectedDate}
             />
             <DateSelector
-              data={isBasketMode ? basketData : assetData}
+              data={filteredData}
               selectedDate={selectedDate}
               onDateChange={setSelectedDate}
             />
@@ -101,7 +140,7 @@ const Simulator = () => {
 
           {/* Insights Panel */}
           <InsightsPanel
-            data={isBasketMode ? basketData : assetData}
+            data={filteredData}
             assetName={isBasketMode ? "Portfolio" : selectedAsset}
             selectedDate={selectedDate}
           />
