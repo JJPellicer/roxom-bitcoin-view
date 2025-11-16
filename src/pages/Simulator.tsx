@@ -5,6 +5,7 @@ import BasketBuilder from "@/components/BasketBuilder";
 import DateSelector from "@/components/DateSelector";
 import DateRangeSelector from "@/components/DateRangeSelector";
 import InsightsPanel from "@/components/InsightsPanel";
+import SocialShare from "@/components/SocialShare";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -143,11 +144,20 @@ const Simulator = () => {
           </div>
 
           {/* Insights Panel */}
-          <InsightsPanel
-            data={filteredData}
-            assetName={isBasketMode ? "Portfolio" : selectedAsset}
-            selectedDate={selectedDate}
-          />
+          <div className="space-y-4">
+            <InsightsPanel
+              data={filteredData}
+              assetName={isBasketMode ? "Portfolio" : selectedAsset}
+              selectedDate={selectedDate}
+            />
+            
+            {/* Social Share */}
+            <SocialShare
+              basketAssets={basketAssets}
+              isBasketMode={isBasketMode}
+              selectedAsset={selectedAsset}
+            />
+          </div>
         </div>
       </div>
     </div>

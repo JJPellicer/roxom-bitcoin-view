@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import { AssetData } from "@/pages/Simulator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface AssetSelectorProps {
   selectedAsset: string;
@@ -9,7 +10,7 @@ interface AssetSelectorProps {
   onDataLoad: (data: AssetData[]) => void;
 }
 
-const ASSETS = [
+const COMMODITIES = [
   { id: "gold", name: "Gold", icon: "🥇", file: "gold_btc.csv" },
   { id: "sp500", name: "S&P 500", icon: "📈", file: "sp500_btc.csv" },
   { id: "oil", name: "Oil", icon: "🛢️", file: "oil_btc.csv" },
@@ -17,10 +18,19 @@ const ASSETS = [
   { id: "us100", name: "US100", icon: "📊", file: "us100_btc.csv" },
 ];
 
+const TREASURY_STOCKS = [
+  { id: "mstr", name: "MicroStrategy", icon: "🟠", file: "mstr_btc.csv" },
+  { id: "gme", name: "GameStop", icon: "🎮", file: "gme_btc.csv" },
+  { id: "mara", name: "Marathon", icon: "⛏️", file: "mara_btc.csv" },
+  { id: "naka", name: "NAKA", icon: "🎯", file: "naka_btc.csv" },
+  { id: "smlr", name: "SMLR", icon: "💎", file: "smlr_btc.csv" },
+];
+
 const AssetSelector = ({ selectedAsset, onAssetChange, onDataLoad }: AssetSelectorProps) => {
   useEffect(() => {
     const loadData = async () => {
-      const asset = ASSETS.find((a) => a.id === selectedAsset);
+      const allAssets = [...COMMODITIES, ...TREASURY_STOCKS];
+      const asset = allAssets.find((a) => a.id === selectedAsset);
       if (!asset) return;
 
       try {
@@ -88,33 +98,48 @@ const AssetSelector = ({ selectedAsset, onAssetChange, onDataLoad }: AssetSelect
     loadData();
   }, [selectedAsset, onDataLoad]);
 
+  const renderAssetGrid = (assets: typeof COMMODITIES) => (
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      {assets.map((asset) => (
+        <button
+          key={asset.id}
+          onClick={() => onAssetChange(asset.id)}
+          className={cn(
+            "p-6 rounded-lg border-2 transition-all duration-200",
+            "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
+            "flex flex-col items-center gap-2",
+            selectedAsset === asset.id
+              ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
+              : "border-border bg-muted hover:border-primary/50"
+          )}
+        >
+          <span className="text-3xl">{asset.icon}</span>
+          <span className={cn(
+            "font-medium text-sm text-center",
+            selectedAsset === asset.id ? "text-primary" : "text-foreground"
+          )}>
+            {asset.name}
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <Card className="p-6 bg-card border-border">
       <h2 className="text-lg font-semibold mb-4 text-foreground">Select Asset</h2>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {ASSETS.map((asset) => (
-          <button
-            key={asset.id}
-            onClick={() => onAssetChange(asset.id)}
-            className={cn(
-              "p-6 rounded-lg border-2 transition-all duration-200",
-              "hover:scale-105 hover:shadow-lg hover:shadow-primary/20",
-              "flex flex-col items-center gap-2",
-              selectedAsset === asset.id
-                ? "border-primary bg-primary/10 shadow-lg shadow-primary/20"
-                : "border-border bg-muted hover:border-primary/50"
-            )}
-          >
-            <span className="text-3xl">{asset.icon}</span>
-            <span className={cn(
-              "font-medium",
-              selectedAsset === asset.id ? "text-primary" : "text-foreground"
-            )}>
-              {asset.name}
-            </span>
-          </button>
-        ))}
-      </div>
+      <Tabs defaultValue="commodities" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 mb-6">
+          <TabsTrigger value="commodities">Commodities & Indices</TabsTrigger>
+          <TabsTrigger value="treasury">🪙 BTC Treasury Stocks</TabsTrigger>
+        </TabsList>
+        <TabsContent value="commodities">
+          {renderAssetGrid(COMMODITIES)}
+        </TabsContent>
+        <TabsContent value="treasury">
+          {renderAssetGrid(TREASURY_STOCKS)}
+        </TabsContent>
+      </Tabs>
     </Card>
   );
 };
