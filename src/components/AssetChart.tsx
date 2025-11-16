@@ -70,9 +70,13 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
       <ResponsiveContainer width="100%" height={400}>
         <LineChart margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <defs>
-            <linearGradient id="confidenceGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+            <linearGradient id="confidenceGradientPast" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.25}/>
               <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.05}/>
+            </linearGradient>
+            <linearGradient id="confidenceGradientFuture" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.15}/>
+              <stop offset="95%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.03}/>
             </linearGradient>
           </defs>
           
@@ -94,14 +98,24 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
           
           {/* Confidence band for past data */}
           {chartData.hasConfidenceBands && chartData.past.length > 0 && (
-            <Area
-              data={chartData.past}
-              type="monotone"
-              dataKey="future_p75"
-              stroke="none"
-              fill="url(#confidenceGradient)"
-              isAnimationActive={true}
-            />
+            <>
+              <Area
+                data={chartData.past}
+                type="monotone"
+                dataKey="future_p25"
+                stroke="none"
+                fill="transparent"
+                isAnimationActive={false}
+              />
+              <Area
+                data={chartData.past}
+                type="monotone"
+                dataKey="future_p75"
+                stroke="none"
+                fill="url(#confidenceGradientPast)"
+                isAnimationActive={false}
+              />
+            </>
           )}
           
           {/* Past median line */}
@@ -118,30 +132,27 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
             }}
           />
           
-          {/* Lower confidence bound for past */}
-          {chartData.hasConfidenceBands && chartData.past.length > 0 && (
-            <Line
-              data={chartData.past}
-              type="monotone"
-              dataKey="future_p25"
-              stroke="hsl(var(--primary))"
-              strokeWidth={1}
-              strokeDasharray="3 3"
-              dot={false}
-              opacity={0.4}
-            />
-          )}
           
           {/* Confidence band for future data */}
           {chartData.hasConfidenceBands && chartData.future.length > 0 && (
-            <Area
-              data={chartData.future}
-              type="monotone"
-              dataKey="future_p75"
-              stroke="none"
-              fill="hsl(var(--muted-foreground) / 0.1)"
-              isAnimationActive={true}
-            />
+            <>
+              <Area
+                data={chartData.future}
+                type="monotone"
+                dataKey="future_p25"
+                stroke="none"
+                fill="transparent"
+                isAnimationActive={false}
+              />
+              <Area
+                data={chartData.future}
+                type="monotone"
+                dataKey="future_p75"
+                stroke="none"
+                fill="url(#confidenceGradientFuture)"
+                isAnimationActive={false}
+              />
+            </>
           )}
           
           {/* Future median line */}
@@ -158,19 +169,6 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
             />
           )}
           
-          {/* Lower confidence bound for future */}
-          {chartData.hasConfidenceBands && chartData.future.length > 0 && (
-            <Line
-              data={chartData.future}
-              type="monotone"
-              dataKey="future_p25"
-              stroke="hsl(var(--muted-foreground))"
-              strokeWidth={1}
-              strokeDasharray="3 3"
-              dot={false}
-              opacity={0.3}
-            />
-          )}
 
           {/* Selected point */}
           {chartData.selectedPoint && (

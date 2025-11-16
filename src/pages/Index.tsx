@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Bitcoin, BarChart3, TrendingUp } from "lucide-react";
+import roxomLogo from "@/assets/roxom-logo.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -14,10 +15,9 @@ const Index = () => {
         
         <div className="container mx-auto px-4 py-20 md:py-32 relative">
           <div className="max-w-4xl mx-auto text-center space-y-8 animate-fade-in-up">
-            {/* Logo/Brand */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card border border-border">
-              <Bitcoin className="h-5 w-5 text-primary animate-glow-pulse" />
-              <span className="text-sm font-medium text-muted-foreground">Powered by LAMBDIC</span>
+            {/* Logo */}
+            <div className="flex justify-center mb-4">
+              <img src={roxomLogo} alt="Roxom" className="h-12 md:h-16" />
             </div>
 
             {/* Main Heading */}

@@ -48,6 +48,12 @@ const BasketBuilder = ({ basketAssets, onBasketChange, onBasketDataLoad }: Baske
       return;
     }
 
+    const newTotalWeight = totalWeight + parseFloat(newWeight);
+    if (newTotalWeight > 100) {
+      toast.error("Total weight cannot exceed 100%");
+      return;
+    }
+
     const updatedAssets = [...basketAssets, { name: newAsset, weight: parseFloat(newWeight) }];
     onBasketChange(updatedAssets);
     setNewAsset("");
@@ -62,9 +68,17 @@ const BasketBuilder = ({ basketAssets, onBasketChange, onBasketDataLoad }: Baske
     const numWeight = parseFloat(weight);
     if (isNaN(numWeight) || numWeight < 0) return;
 
-    onBasketChange(
-      basketAssets.map((a) => (a.name === assetName ? { ...a, weight: numWeight } : a))
+    const updatedAssets = basketAssets.map((a) => 
+      (a.name === assetName ? { ...a, weight: numWeight } : a)
     );
+    
+    const newTotalWeight = updatedAssets.reduce((sum, asset) => sum + asset.weight, 0);
+    if (newTotalWeight > 100) {
+      toast.error("Total weight cannot exceed 100%");
+      return;
+    }
+
+    onBasketChange(updatedAssets);
   };
 
   useEffect(() => {
@@ -228,15 +242,22 @@ const BasketBuilder = ({ basketAssets, onBasketChange, onBasketDataLoad }: Baske
           ))}
           <div className="flex justify-between items-center p-3 bg-muted/50 rounded-lg border-2 border-border">
             <span className="font-semibold text-foreground">Total Weight:</span>
-            <span
-              className={`font-bold ${
-                Math.abs(totalWeight - 100) < 0.01
-                  ? "text-primary"
-                  : "text-destructive"
-              }`}
-            >
-              {totalWeight.toFixed(1)}%
-            </span>
+            <div className="flex flex-col items-end">
+              <span
+                className={`font-bold ${
+                  Math.abs(totalWeight - 100) < 0.01
+                    ? "text-primary"
+                    : "text-destructive"
+                }`}
+              >
+                {totalWeight.toFixed(1)}%
+              </span>
+              {Math.abs(totalWeight - 100) >= 0.01 && (
+                <span className="text-xs text-destructive">
+                  Must equal 100%
+                </span>
+              )}
+            </div>
           </div>
         </div>
       )}
