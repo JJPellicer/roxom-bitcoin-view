@@ -1,7 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import AssetChart from "@/components/AssetChart";
 import AssetSelector from "@/components/AssetSelector";
 import BasketBuilder from "@/components/BasketBuilder";
+import MultiAssetComparison from "@/components/MultiAssetComparison";
+import ComparisonChart from "@/components/ComparisonChart";
 import DateSelector from "@/components/DateSelector";
 import DateRangeSelector from "@/components/DateRangeSelector";
 import InsightsPanel from "@/components/InsightsPanel";
@@ -30,9 +32,14 @@ const Simulator = () => {
   const [basketAssets, setBasketAssets] = useState<BasketAsset[]>([]);
   const [basketData, setBasketData] = useState<AssetData[]>([]);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const [isBasketMode, setIsBasketMode] = useState(false);
+  const [mode, setMode] = useState<"single" | "basket" | "compare">("single");
   
-  const currentData = isBasketMode ? basketData : assetData;
+  // Comparison mode state
+  const [comparisonAssets, setComparisonAssets] = useState<string[]>([]);
+  const [comparisonData, setComparisonData] = useState<{ assetId: string; assetName: string; data: AssetData[] }[]>([]);
+  const [comparisonViewMode, setComparisonViewMode] = useState<"overlay" | "separate">("overlay");
+  
+  const currentData = mode === "basket" ? basketData : assetData;
   
   // Get min and max dates from data
   const { minDate, maxDate } = useMemo(() => {
@@ -57,6 +64,100 @@ const Simulator = () => {
     if (!startDate || !endDate) return currentData;
     return currentData.filter(d => d.date >= startDate && d.date <= endDate);
   }, [currentData, startDate, endDate]);
+
+  // Load comparison data when assets change
+  useEffect(() => {
+    if (mode !== "compare" || comparisonAssets.length === 0) {
+      setComparisonData([]);
+      return;
+    }
+
+    const loadComparisonData = async () => {
+      const allAssetsMap = [
+        { id: "gold", name: "Gold" },
+        { id: "sp500", name: "S&P 500" },
+        { id: "oil", name: "Oil" },
+        { id: "cpi", name: "CPI" },
+        { id: "us100", name: "US100" },
+        { id: "mstr", name: "MicroStrategy" },
+        { id: "gme", name: "GameStop" },
+        { id: "mara", name: "Marathon" },
+        { id: "naka", name: "NAKA" },
+        { id: "smlr", name: "SMLR" },
+      ];
+
+      const loadedData = await Promise.all(
+        comparisonAssets.map(async (assetId) => {
+          const assetInfo = allAssetsMap.find(a => a.id === assetId);
+          if (!assetInfo) return null;
+
+          const data: AssetData[] = [];
+
+          // Load historical data
+          try {
+            const historicalResponse = await fetch(`/data/${assetId}_historical.csv`);
+            const historicalText = await historicalResponse.text();
+            const historicalLines = historicalText.trim().split("\n");
+
+            for (let i = 1; i < historicalLines.length; i++) {
+              const line = historicalLines[i].trim();
+              if (!line) continue;
+
+              const parts = line.split(",");
+              const price = parseFloat(parts[1]);
+
+              if (!isNaN(price)) {
+                data.push({
+                  date: parts[0],
+                  price_in_btc: price,
+                });
+              }
+            }
+          } catch (error) {
+            console.error(`Historical data not found for ${assetId}`);
+          }
+
+          // Load future data
+          try {
+            const futureResponse = await fetch(`/data/${assetId}_btc.csv`);
+            const futureText = await futureResponse.text();
+            const futureLines = futureText.trim().split("\n");
+
+            for (let i = 1; i < futureLines.length; i++) {
+              const line = futureLines[i].trim();
+              if (!line) continue;
+
+              const [date, median, p25, p75] = line.split(",");
+              const medianVal = parseFloat(median);
+              const p25Val = parseFloat(p25);
+              const p75Val = parseFloat(p75);
+
+              if (!isNaN(medianVal) && !isNaN(p25Val) && !isNaN(p75Val)) {
+                data.push({
+                  date,
+                  price_in_btc: medianVal,
+                  future_p25: p25Val,
+                  future_p75: p75Val,
+                });
+              }
+            }
+          } catch (error) {
+            console.error(`Future data not found for ${assetId}`);
+          }
+
+          return {
+            assetId,
+            assetName: assetInfo.name,
+            data,
+          };
+        })
+      );
+
+      setComparisonData(loadedData.filter(d => d !== null) as { assetId: string; assetName: string; data: AssetData[] }[]);
+    };
+
+    loadComparisonData();
+  }, [comparisonAssets, mode]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -86,33 +187,49 @@ const Simulator = () => {
         {/* Mode Toggle */}
         <div className="flex justify-center gap-4">
           <Button
-            variant={!isBasketMode ? "default" : "outline"}
-            onClick={() => setIsBasketMode(false)}
+            variant={mode === "single" ? "default" : "outline"}
+            onClick={() => setMode("single")}
             className="min-w-[150px]"
           >
             Single Asset
           </Button>
           <Button
-            variant={isBasketMode ? "default" : "outline"}
-            onClick={() => setIsBasketMode(true)}
+            variant={mode === "basket" ? "default" : "outline"}
+            onClick={() => setMode("basket")}
             className="min-w-[150px]"
           >
             Portfolio Basket
           </Button>
+          <Button
+            variant={mode === "compare" ? "default" : "outline"}
+            onClick={() => setMode("compare")}
+            className="min-w-[150px]"
+          >
+            Compare Assets
+          </Button>
         </div>
 
-        {/* Asset Selector / Basket Builder */}
-        {!isBasketMode ? (
+        {/* Asset Selector / Basket Builder / Comparison */}
+        {mode === "single" && (
           <AssetSelector
             selectedAsset={selectedAsset}
             onAssetChange={setSelectedAsset}
             onDataLoad={setAssetData}
           />
-        ) : (
+        )}
+        
+        {mode === "basket" && (
           <BasketBuilder
             basketAssets={basketAssets}
             onBasketChange={setBasketAssets}
             onBasketDataLoad={setBasketData}
+          />
+        )}
+        
+        {mode === "compare" && (
+          <MultiAssetComparison
+            selectedAssets={comparisonAssets}
+            onSelectionChange={setComparisonAssets}
           />
         )}
 
@@ -129,36 +246,45 @@ const Simulator = () => {
         )}
 
         {/* Chart Section */}
-        <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
-          <div className="space-y-4">
-            <AssetChart
-              data={filteredData}
-              assetName={isBasketMode ? "Portfolio" : selectedAsset}
-              selectedDate={selectedDate}
-            />
-            <DateSelector
-              data={filteredData}
-              selectedDate={selectedDate}
-              onDateChange={setSelectedDate}
-            />
-          </div>
+        {mode === "compare" ? (
+          <ComparisonChart
+            assetsData={comparisonData}
+            selectedDate={selectedDate}
+            viewMode={comparisonViewMode}
+            onViewModeChange={setComparisonViewMode}
+          />
+        ) : (
+          <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
+            <div className="space-y-4">
+              <AssetChart
+                data={filteredData}
+                assetName={mode === "basket" ? "Portfolio" : selectedAsset}
+                selectedDate={selectedDate}
+              />
+              <DateSelector
+                data={filteredData}
+                selectedDate={selectedDate}
+                onDateChange={setSelectedDate}
+              />
+            </div>
 
-          {/* Insights Panel */}
-          <div className="space-y-4">
-            <InsightsPanel
-              data={filteredData}
-              assetName={isBasketMode ? "Portfolio" : selectedAsset}
-              selectedDate={selectedDate}
-            />
-            
-            {/* Social Share */}
-            <SocialShare
-              basketAssets={basketAssets}
-              isBasketMode={isBasketMode}
-              selectedAsset={selectedAsset}
-            />
+            {/* Insights Panel */}
+            <div className="space-y-4">
+              <InsightsPanel
+                data={filteredData}
+                assetName={mode === "basket" ? "Portfolio" : selectedAsset}
+                selectedDate={selectedDate}
+              />
+              
+              {/* Social Share */}
+              <SocialShare
+                basketAssets={basketAssets}
+                isBasketMode={mode === "basket"}
+                selectedAsset={selectedAsset}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
