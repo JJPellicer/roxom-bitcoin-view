@@ -86,9 +86,11 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
             tick={{ fill: "rgba(255, 255, 255, 0.7)", fontSize: 13 }}
             tickFormatter={(value) => {
               const date = new Date(value);
-              return date.getFullYear().toString();
+              const month = (date.getMonth() + 1).toString().padStart(2, '0');
+              const year = date.getFullYear();
+              return `${month}-${year}`;
             }}
-            minTickGap={80}
+            minTickGap={100}
           />
           <YAxis
             stroke="rgba(255, 255, 255, 0.3)"
@@ -121,7 +123,7 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
             />
           )}
           
-          {/* Confidence band for past data */}
+          {/* Confidence band for past data - P25 to P75 range */}
           {chartData.hasConfidenceBands && chartData.past.length > 0 && (
             <>
               <Area
@@ -148,17 +150,17 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
             data={chartData.past}
             type="monotone"
             dataKey="price_in_btc"
-            stroke="hsl(var(--primary))"
+            stroke="#b388ff"
             strokeWidth={3}
             dot={false}
             isAnimationActive={true}
             style={{
-              filter: "drop-shadow(0 0 8px hsl(var(--primary) / 0.5))",
+              filter: "drop-shadow(0 0 8px rgba(179, 136, 255, 0.5))",
             }}
           />
           
           
-          {/* Confidence band for future data */}
+          {/* Confidence band for future data - P25 to P75 range */}
           {chartData.hasConfidenceBands && chartData.future.length > 0 && (
             <>
               <Area
@@ -186,11 +188,11 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
               data={chartData.future}
               type="monotone"
               dataKey="price_in_btc"
-              stroke="hsl(var(--muted-foreground))"
+              stroke="#b388ff"
               strokeWidth={2}
               strokeDasharray="5 5"
               dot={false}
-              opacity={0.5}
+              isAnimationActive={false}
             />
           )}
           
@@ -214,12 +216,12 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
       {chartData.hasConfidenceBands && (
         <div className="mt-4 flex items-center gap-6 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-0.5 bg-primary" style={{ filter: "drop-shadow(0 0 4px hsl(var(--primary) / 0.5))" }} />
-            <span>Median</span>
+            <div className="w-8 h-0.5 rounded" style={{ backgroundColor: "#b388ff", boxShadow: "0 0 4px rgba(179, 136, 255, 0.5)" }} />
+            <span>Median (P50)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-3 bg-primary opacity-20 rounded" />
-            <span>25th-75th Percentile</span>
+            <div className="w-8 h-3 rounded" style={{ backgroundColor: "rgba(179, 136, 255, 0.25)" }} />
+            <span>25th-75th Percentile Range</span>
           </div>
         </div>
       )}
