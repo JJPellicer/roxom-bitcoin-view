@@ -6,21 +6,28 @@ import { TrendingUp, TrendingDown, Calendar, Bitcoin } from "lucide-react";
 interface InsightsPanelProps {
   data: AssetData[];
   assetName: string;
+  selectedDate: string | null;
 }
 
-const InsightsPanel = ({ data, assetName }: InsightsPanelProps) => {
+const InsightsPanel = ({ data, assetName, selectedDate }: InsightsPanelProps) => {
   const insights = useMemo(() => {
     if (!data.length) return null;
 
     const startData = data[0];
     const endData = data[data.length - 1];
+    
+    let selectedData = endData;
+    if (selectedDate) {
+      const found = data.find((d) => d.date === selectedDate);
+      if (found) selectedData = found;
+    }
 
     const percentChange =
-      ((endData.price_in_btc - startData.price_in_btc) / startData.price_in_btc) * 100;
+      ((selectedData.price_in_btc - startData.price_in_btc) / startData.price_in_btc) * 100;
 
     return {
-      currentValue: endData.price_in_btc,
-      currentDate: endData.date,
+      currentValue: selectedData.price_in_btc,
+      currentDate: selectedData.date,
       startValue: startData.price_in_btc,
       startDate: startData.date,
       endValue: endData.price_in_btc,
@@ -28,7 +35,7 @@ const InsightsPanel = ({ data, assetName }: InsightsPanelProps) => {
       percentChange,
       isPositive: percentChange >= 0,
     };
-  }, [data]);
+  }, [data, selectedDate]);
 
   if (!insights) {
     return (
@@ -96,17 +103,38 @@ const InsightsPanel = ({ data, assetName }: InsightsPanelProps) => {
       {/* Summary */}
       <div className="pt-4 border-t border-border">
         <p className="text-sm text-muted-foreground leading-relaxed">
-          From <span className="text-foreground font-medium">{insights.startDate}</span> to{" "}
-          <span className="text-foreground font-medium">{insights.endDate}</span>, {assetName}{" "}
-          changed{" "}
-          <span
-            className={`font-medium ${
-              insights.isPositive ? "text-green-500" : "text-red-500"
-            }`}
-          >
-            {insights.percentChange.toFixed(2)}%
-          </span>{" "}
-          when priced in Bitcoin.
+          {selectedDate ? (
+            <>
+              In <span className="text-foreground font-medium">{insights.currentDate}</span>,{" "}
+              {assetName} was worth{" "}
+              <span className="text-primary font-mono font-medium">
+                {insights.currentValue.toFixed(6)} BTC
+              </span>
+              . From {insights.startDate} to this point, the value changed{" "}
+              <span
+                className={`font-medium ${
+                  insights.isPositive ? "text-green-500" : "text-red-500"
+                }`}
+              >
+                {insights.percentChange.toFixed(2)}%
+              </span>{" "}
+              in BTC terms.
+            </>
+          ) : (
+            <>
+              From <span className="text-foreground font-medium">{insights.startDate}</span> to{" "}
+              <span className="text-foreground font-medium">{insights.endDate}</span>, {assetName}{" "}
+              changed{" "}
+              <span
+                className={`font-medium ${
+                  insights.isPositive ? "text-green-500" : "text-red-500"
+                }`}
+              >
+                {insights.percentChange.toFixed(2)}%
+              </span>{" "}
+              when priced in Bitcoin.
+            </>
+          )}
         </p>
       </div>
     </Card>

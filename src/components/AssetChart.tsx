@@ -1,31 +1,35 @@
 import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Area, ReferenceLine } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceDot, Area } from "recharts";
 import { AssetData } from "@/pages/Simulator";
 
 interface AssetChartProps {
   data: AssetData[];
   assetName: string;
+  selectedDate: string | null;
 }
 
-const AssetChart = ({ data, assetName }: AssetChartProps) => {
+const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
   const chartData = useMemo(() => {
-    if (!data.length) return { historical: [], forecast: [], transitionDate: null, hasConfidenceBands: false };
+    if (!data.length) return { past: [], future: [], selectedPoint: null, hasConfidenceBands: false };
 
-    // Find the transition point between historical and forecast data
-    const firstForecastIndex = data.findIndex(d => d.future_p25 !== undefined && d.future_p75 !== undefined);
-    
-    if (firstForecastIndex === -1) {
-      // No forecast data, all historical
-      return { historical: data, forecast: [], transitionDate: null, hasConfidenceBands: false };
+    const hasConfidenceBands = data.some(d => d.future_p25 !== undefined && d.future_p75 !== undefined);
+
+    if (!selectedDate) {
+      return { past: data, future: [], selectedPoint: null, hasConfidenceBands };
     }
 
-    const historical = data.slice(0, firstForecastIndex);
-    const forecast = data.slice(firstForecastIndex);
-    const transitionDate = forecast[0]?.date || null;
+    const selectedIndex = data.findIndex((d) => d.date === selectedDate);
+    if (selectedIndex === -1) {
+      return { past: data, future: [], selectedPoint: null, hasConfidenceBands };
+    }
 
-    return { historical, forecast, transitionDate, hasConfidenceBands: true };
-  }, [data]);
+    const past = data.slice(0, selectedIndex + 1);
+    const future = data.slice(selectedIndex);
+    const selectedPoint = data[selectedIndex];
+
+    return { past, future, selectedPoint, hasConfidenceBands };
+  }, [data, selectedDate]);
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
@@ -66,9 +70,13 @@ const AssetChart = ({ data, assetName }: AssetChartProps) => {
       <ResponsiveContainer width="100%" height={400}>
         <LineChart margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <defs>
-            <linearGradient id="forecastBand" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.2}/>
+            <linearGradient id="confidenceGradientPast" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.25}/>
               <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.05}/>
+            </linearGradient>
+            <linearGradient id="confidenceGradientFuture" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.15}/>
+              <stop offset="95%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.03}/>
             </linearGradient>
           </defs>
           
@@ -88,44 +96,11 @@ const AssetChart = ({ data, assetName }: AssetChartProps) => {
           />
           <Tooltip content={<CustomTooltip />} />
           
-          {/* Transition line between historical and forecast */}
-          {chartData.transitionDate && (
-            <ReferenceLine
-              x={chartData.transitionDate}
-              stroke="hsl(var(--muted-foreground))"
-              strokeDasharray="3 3"
-              strokeWidth={1}
-              opacity={0.5}
-              label={{
-                value: "Forecast →",
-                position: "top",
-                fill: "hsl(var(--muted-foreground))",
-                fontSize: 10,
-              }}
-            />
-          )}
-          
-          {/* Historical line */}
-          {chartData.historical.length > 0 && (
-            <Line
-              data={chartData.historical}
-              type="monotone"
-              dataKey="price_in_btc"
-              stroke="hsl(var(--primary))"
-              strokeWidth={2.5}
-              dot={false}
-              isAnimationActive={true}
-              style={{
-                filter: "drop-shadow(0 0 8px hsl(var(--primary) / 0.5))",
-              }}
-            />
-          )}
-          
-          {/* Forecast confidence band (P25-P75) */}
-          {chartData.hasConfidenceBands && chartData.forecast.length > 0 && (
+          {/* Confidence band for past data */}
+          {chartData.hasConfidenceBands && chartData.past.length > 0 && (
             <>
               <Area
-                data={chartData.forecast}
+                data={chartData.past}
                 type="monotone"
                 dataKey="future_p25"
                 stroke="none"
@@ -133,28 +108,79 @@ const AssetChart = ({ data, assetName }: AssetChartProps) => {
                 isAnimationActive={false}
               />
               <Area
-                data={chartData.forecast}
+                data={chartData.past}
                 type="monotone"
                 dataKey="future_p75"
                 stroke="none"
-                fill="url(#forecastBand)"
+                fill="url(#confidenceGradientPast)"
                 isAnimationActive={false}
               />
             </>
           )}
           
-          {/* Forecast median line (P50) */}
-          {chartData.forecast.length > 0 && (
+          {/* Past median line */}
+          <Line
+            data={chartData.past}
+            type="monotone"
+            dataKey="price_in_btc"
+            stroke="hsl(var(--primary))"
+            strokeWidth={3}
+            dot={false}
+            isAnimationActive={true}
+            style={{
+              filter: "drop-shadow(0 0 8px hsl(var(--primary) / 0.5))",
+            }}
+          />
+          
+          
+          {/* Confidence band for future data */}
+          {chartData.hasConfidenceBands && chartData.future.length > 0 && (
+            <>
+              <Area
+                data={chartData.future}
+                type="monotone"
+                dataKey="future_p25"
+                stroke="none"
+                fill="transparent"
+                isAnimationActive={false}
+              />
+              <Area
+                data={chartData.future}
+                type="monotone"
+                dataKey="future_p75"
+                stroke="none"
+                fill="url(#confidenceGradientFuture)"
+                isAnimationActive={false}
+              />
+            </>
+          )}
+          
+          {/* Future median line */}
+          {chartData.future.length > 0 && (
             <Line
-              data={chartData.forecast}
+              data={chartData.future}
               type="monotone"
               dataKey="price_in_btc"
-              stroke="hsl(var(--primary))"
-              strokeWidth={2.5}
+              stroke="hsl(var(--muted-foreground))"
+              strokeWidth={2}
+              strokeDasharray="5 5"
               dot={false}
-              isAnimationActive={false}
+              opacity={0.5}
+            />
+          )}
+          
+
+          {/* Selected point */}
+          {chartData.selectedPoint && (
+            <ReferenceDot
+              x={chartData.selectedPoint.date}
+              y={chartData.selectedPoint.price_in_btc}
+              r={6}
+              fill="hsl(var(--secondary))"
+              stroke="hsl(var(--secondary))"
+              strokeWidth={2}
               style={{
-                filter: "drop-shadow(0 0 8px hsl(var(--primary) / 0.5))",
+                filter: "drop-shadow(0 0 10px hsl(var(--secondary)))",
               }}
             />
           )}
@@ -164,11 +190,11 @@ const AssetChart = ({ data, assetName }: AssetChartProps) => {
         <div className="mt-4 flex items-center gap-6 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <div className="w-8 h-0.5 bg-primary" style={{ filter: "drop-shadow(0 0 4px hsl(var(--primary) / 0.5))" }} />
-            <span>Historical & Median Forecast</span>
+            <span>Median</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-8 h-3 bg-primary opacity-20 rounded" />
-            <span>Forecast Range (P25-P75)</span>
+            <span>25th-75th Percentile</span>
           </div>
         </div>
       )}
