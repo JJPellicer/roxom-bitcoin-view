@@ -11,24 +11,44 @@ interface AssetChartProps {
 
 const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
   const chartData = useMemo(() => {
-    if (!data.length) return { past: [], future: [], selectedPoint: null, hasConfidenceBands: false };
+    if (!data.length) return { 
+      allData: [], 
+      selectedPoint: null, 
+      hasConfidenceBands: false,
+      forecastStartDate: null 
+    };
 
     const hasConfidenceBands = data.some(d => d.future_p25 !== undefined && d.future_p75 !== undefined);
+    const forecastStartIndex = data.findIndex(d => d.future_p25 !== undefined);
+    const forecastStartDate = forecastStartIndex >= 0 ? data[forecastStartIndex].date : null;
 
     if (!selectedDate) {
-      return { past: data, future: [], selectedPoint: null, hasConfidenceBands };
+      return { 
+        allData: data, 
+        selectedPoint: null, 
+        hasConfidenceBands,
+        forecastStartDate 
+      };
     }
 
     const selectedIndex = data.findIndex((d) => d.date === selectedDate);
     if (selectedIndex === -1) {
-      return { past: data, future: [], selectedPoint: null, hasConfidenceBands };
+      return { 
+        allData: data, 
+        selectedPoint: null, 
+        hasConfidenceBands,
+        forecastStartDate 
+      };
     }
 
-    const past = data.slice(0, selectedIndex + 1);
-    const future = data.slice(selectedIndex);
     const selectedPoint = data[selectedIndex];
 
-    return { past, future, selectedPoint, hasConfidenceBands };
+    return { 
+      allData: data, 
+      selectedPoint, 
+      hasConfidenceBands,
+      forecastStartDate 
+    };
   }, [data, selectedDate]);
 
   const CustomTooltip = ({ active, payload }: any) => {
@@ -68,15 +88,11 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
         {assetName} Priced in Bitcoin
       </h2>
       <ResponsiveContainer width="100%" height={400}>
-        <LineChart margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+        <LineChart data={chartData.allData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <defs>
-            <linearGradient id="confidenceGradientPast" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#b388ff" stopOpacity={0.3}/>
-              <stop offset="100%" stopColor="#b388ff" stopOpacity={0.05}/>
-            </linearGradient>
-            <linearGradient id="confidenceGradientFuture" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#b388ff" stopOpacity={0.2}/>
-              <stop offset="100%" stopColor="#b388ff" stopOpacity={0.03}/>
+            <linearGradient id="confidenceBand" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#b388ff" stopOpacity={0.35}/>
+              <stop offset="100%" stopColor="#b388ff" stopOpacity={0.15}/>
             </linearGradient>
           </defs>
           
@@ -108,93 +124,55 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
           <Tooltip content={<CustomTooltip />} />
           
           {/* Vertical line marking forecast start */}
-          {chartData.future.length > 0 && chartData.selectedPoint && (
+          {chartData.forecastStartDate && (
             <ReferenceLine
-              x={chartData.selectedPoint.date}
-              stroke="rgba(179, 136, 255, 0.4)"
-              strokeWidth={1.5}
-              strokeDasharray="4 4"
+              x={chartData.forecastStartDate}
+              stroke="#b388ff"
+              strokeWidth={2}
+              strokeDasharray="6 4"
               label={{
-                value: "Forecast Start",
-                position: "top",
-                fill: "rgba(255, 255, 255, 0.5)",
+                value: "Forecast Starts",
+                position: "insideTopRight",
+                fill: "#b388ff",
                 fontSize: 11,
+                fontWeight: 600,
               }}
             />
           )}
           
-          {/* Confidence band for past data - P25 to P75 range */}
-          {chartData.hasConfidenceBands && chartData.past.length > 0 && (
-            <>
-              <Area
-                data={chartData.past}
-                type="monotone"
-                dataKey="future_p25"
-                stroke="none"
-                fill="transparent"
-                isAnimationActive={false}
-              />
-              <Area
-                data={chartData.past}
-                type="monotone"
-                dataKey="future_p75"
-                stroke="none"
-                fill="url(#confidenceGradientPast)"
-                isAnimationActive={false}
-              />
-            </>
+          {/* Confidence band - P25 to P75 range for future data */}
+          {chartData.hasConfidenceBands && (
+            <Area
+              type="monotone"
+              dataKey="future_p75"
+              stroke="none"
+              fill="url(#confidenceBand)"
+              isAnimationActive={false}
+            />
+          )}
+          {chartData.hasConfidenceBands && (
+            <Area
+              type="monotone"
+              dataKey="future_p25"
+              stroke="none"
+              fill="hsl(var(--background))"
+              isAnimationActive={false}
+            />
           )}
           
-          {/* Past median line */}
+          {/* Main median line */}
           <Line
-            data={chartData.past}
             type="monotone"
             dataKey="price_in_btc"
             stroke="#b388ff"
             strokeWidth={3}
             dot={false}
             isAnimationActive={true}
+            connectNulls
             style={{
               filter: "drop-shadow(0 0 8px rgba(179, 136, 255, 0.5))",
             }}
           />
-          
-          
-          {/* Confidence band for future data - P25 to P75 range */}
-          {chartData.hasConfidenceBands && chartData.future.length > 0 && (
-            <>
-              <Area
-                data={chartData.future}
-                type="monotone"
-                dataKey="future_p25"
-                stroke="none"
-                fill="transparent"
-                isAnimationActive={false}
-              />
-              <Area
-                data={chartData.future}
-                type="monotone"
-                dataKey="future_p75"
-                stroke="none"
-                fill="url(#confidenceGradientFuture)"
-                isAnimationActive={false}
-              />
-            </>
-          )}
-          
-          {/* Future median line */}
-          {chartData.future.length > 0 && (
-            <Line
-              data={chartData.future}
-              type="monotone"
-              dataKey="price_in_btc"
-              stroke="#b388ff"
-              strokeWidth={2}
-              strokeDasharray="5 5"
-              dot={false}
-              isAnimationActive={false}
-            />
-          )}
           
 
           {/* Selected point */}
