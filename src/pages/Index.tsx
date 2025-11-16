@@ -2,12 +2,9 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Bitcoin, BarChart3, TrendingUp } from "lucide-react";
 import roxomLogo from "@/assets/roxom-logo.png";
-
 const Index = () => {
   const navigate = useNavigate();
-
-  return (
-    <div className="min-h-screen bg-background">
+  return <div className="min-h-screen bg-background">
       {/* Hero Section */}
       <div className="relative overflow-hidden">
         {/* Background glow effect */}
@@ -38,11 +35,7 @@ const Index = () => {
 
             {/* CTA Button */}
             <div className="pt-4">
-              <Button
-                size="lg"
-                onClick={() => navigate("/simulator")}
-                className="text-lg px-8 py-6 group shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all"
-              >
+              <Button size="lg" onClick={() => navigate("/simulator")} className="text-lg px-8 py-6 group shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/30 transition-all">
                 Launch the Simulator
                 <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
@@ -89,11 +82,9 @@ const Index = () => {
       {/* Footer */}
       <footer className="border-t border-border mt-20">
         <div className="container mx-auto px-4 py-8 text-center text-muted-foreground text-sm">
-          <p>Outperform Traditional Assets with Roxom • LAMBDIC Simulator</p>
+          <p>Outperform Traditional Assets with Roxom • BTC Simulator</p>
         </div>
       </footer>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
