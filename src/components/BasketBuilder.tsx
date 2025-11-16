@@ -14,11 +14,19 @@ interface BasketBuilderProps {
 }
 
 const AVAILABLE_ASSETS = [
-  { id: "gold", name: "Gold", file: "gold_btc.csv" },
-  { id: "sp500", name: "S&P 500", file: "sp500_btc.csv" },
-  { id: "oil", name: "Oil", file: "oil_btc.csv" },
-  { id: "cpi", name: "CPI", file: "cpi_btc.csv" },
-  { id: "us100", name: "US100", file: "us100_btc.csv" },
+  // Commodities & Indices
+  { id: "gold", name: "Gold", file: "gold_btc.csv", category: "commodity" },
+  { id: "oil", name: "Oil", file: "oil_btc.csv", category: "commodity" },
+  { id: "sp500", name: "S&P 500", file: "sp500_btc.csv", category: "index" },
+  { id: "us100", name: "US100", file: "us100_btc.csv", category: "index" },
+  { id: "cpi", name: "CPI", file: "cpi_btc.csv", category: "index" },
+  
+  // BTC Treasury Stocks
+  { id: "mstr", name: "MicroStrategy", file: "mstr_btc.csv", category: "treasury" },
+  { id: "gme", name: "GameStop", file: "gme_btc.csv", category: "treasury" },
+  { id: "mara", name: "Marathon", file: "mara_btc.csv", category: "treasury" },
+  { id: "naka", name: "NAKA", file: "naka_btc.csv", category: "treasury" },
+  { id: "smlr", name: "SMLR", file: "smlr_btc.csv", category: "treasury" },
 ];
 
 const BasketBuilder = ({ basketAssets, onBasketChange, onBasketDataLoad }: BasketBuilderProps) => {
@@ -270,8 +278,24 @@ const BasketBuilder = ({ basketAssets, onBasketChange, onBasketDataLoad }: Baske
               <SelectValue placeholder="Select asset" />
             </SelectTrigger>
             <SelectContent>
+              {/* Commodities & Indices */}
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                Commodities & Indices
+              </div>
               {AVAILABLE_ASSETS.filter(
-                (a) => !basketAssets.some((ba) => ba.name === a.id)
+                (a) => a.category !== "treasury" && !basketAssets.some((ba) => ba.name === a.id)
+              ).map((asset) => (
+                <SelectItem key={asset.id} value={asset.id}>
+                  {asset.name}
+                </SelectItem>
+              ))}
+              
+              {/* BTC Treasury Stocks */}
+              <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground mt-2">
+                🪙 BTC Treasury Stocks
+              </div>
+              {AVAILABLE_ASSETS.filter(
+                (a) => a.category === "treasury" && !basketAssets.some((ba) => ba.name === a.id)
               ).map((asset) => (
                 <SelectItem key={asset.id} value={asset.id}>
                   {asset.name}
@@ -293,7 +317,7 @@ const BasketBuilder = ({ basketAssets, onBasketChange, onBasketDataLoad }: Baske
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Add up to 5 assets. Weights should total 100% for accurate representation.
+          Mix commodities, indices, and BTC treasury stocks. Add up to 5 assets with weights totaling 100%.
         </p>
       </div>
     </Card>
