@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceDot, Area } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceDot, ReferenceLine, Area } from "recharts";
 import { AssetData } from "@/pages/Simulator";
 
 interface AssetChartProps {
@@ -71,30 +71,55 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
         <LineChart margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <defs>
             <linearGradient id="confidenceGradientPast" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.25}/>
-              <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.05}/>
+              <stop offset="0%" stopColor="#b388ff" stopOpacity={0.3}/>
+              <stop offset="100%" stopColor="#b388ff" stopOpacity={0.05}/>
             </linearGradient>
             <linearGradient id="confidenceGradientFuture" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.15}/>
-              <stop offset="95%" stopColor="hsl(var(--muted-foreground))" stopOpacity={0.03}/>
+              <stop offset="0%" stopColor="#b388ff" stopOpacity={0.2}/>
+              <stop offset="100%" stopColor="#b388ff" stopOpacity={0.03}/>
             </linearGradient>
           </defs>
           
           <XAxis
             dataKey="date"
-            stroke="hsl(var(--muted-foreground))"
-            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
+            stroke="rgba(255, 255, 255, 0.3)"
+            tick={{ fill: "rgba(255, 255, 255, 0.7)", fontSize: 13 }}
             tickFormatter={(value) => {
               const date = new Date(value);
               return date.getFullYear().toString();
             }}
+            minTickGap={80}
           />
           <YAxis
-            stroke="hsl(var(--muted-foreground))"
-            tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }}
-            tickFormatter={(value) => value.toFixed(6)}
+            stroke="rgba(255, 255, 255, 0.3)"
+            tick={{ fill: "rgba(255, 255, 255, 0.7)", fontSize: 13 }}
+            tickFormatter={(value) => {
+              if (value === 0) return "0.0000";
+              if (value < 0.001) return value.toFixed(7);
+              if (value < 0.01) return value.toFixed(5);
+              if (value < 1) return value.toFixed(4);
+              return value.toFixed(3);
+            }}
+            domain={['auto', 'auto']}
+            tickCount={7}
           />
           <Tooltip content={<CustomTooltip />} />
+          
+          {/* Vertical line marking forecast start */}
+          {chartData.future.length > 0 && chartData.selectedPoint && (
+            <ReferenceLine
+              x={chartData.selectedPoint.date}
+              stroke="rgba(179, 136, 255, 0.4)"
+              strokeWidth={1.5}
+              strokeDasharray="4 4"
+              label={{
+                value: "Forecast Start",
+                position: "top",
+                fill: "rgba(255, 255, 255, 0.5)",
+                fontSize: 11,
+              }}
+            />
+          )}
           
           {/* Confidence band for past data */}
           {chartData.hasConfidenceBands && chartData.past.length > 0 && (
