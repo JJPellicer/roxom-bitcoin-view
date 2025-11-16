@@ -10,6 +10,8 @@ interface ComparisonChartProps {
   selectedDate: string | null;
   viewMode: "overlay" | "separate";
   onViewModeChange: (mode: "overlay" | "separate") => void;
+  startDate?: string;
+  endDate?: string;
 }
 
 const ASSET_COLORS = [
@@ -20,42 +22,81 @@ const ASSET_COLORS = [
   "#ffd93d", // Yellow
 ];
 
-const ComparisonChart = ({ assetsData, selectedDate, viewMode, onViewModeChange }: ComparisonChartProps) => {
+const ComparisonChart = ({ assetsData, selectedDate, viewMode, onViewModeChange, startDate, endDate }: ComparisonChartProps) => {
+  // Filter and normalize data by date range
+  const processedAssetsData = useMemo(() => {
+    return assetsData.map(asset => {
+      // Filter by date range
+      let filteredData = asset.data;
+      if (startDate && endDate) {
+        filteredData = asset.data.filter(d => d.date >= startDate && d.date <= endDate);
+      }
+      
+      // Normalize to start at 1
+      if (filteredData.length > 0) {
+        const firstValue = filteredData[0].price_in_btc;
+        const normalizedData = filteredData.map(d => ({
+          ...d,
+          normalized: d.price_in_btc / firstValue,
+        }));
+        return { ...asset, data: normalizedData };
+      }
+      
+      return { ...asset, data: filteredData };
+    });
+  }, [assetsData, startDate, endDate]);
+
   // Merge all data by date for overlay mode
   const mergedData = useMemo(() => {
-    if (assetsData.length === 0) return [];
+    if (processedAssetsData.length === 0) return [];
 
     const dateMap = new Map<string, any>();
 
-    assetsData.forEach((asset, index) => {
-      asset.data.forEach((dataPoint) => {
+    processedAssetsData.forEach((asset) => {
+      asset.data.forEach((dataPoint: any) => {
         if (!dateMap.has(dataPoint.date)) {
           dateMap.set(dataPoint.date, { date: dataPoint.date });
         }
-        dateMap.get(dataPoint.date)![asset.assetId] = dataPoint.price_in_btc;
+        dateMap.get(dataPoint.date)![asset.assetId] = dataPoint.normalized || dataPoint.price_in_btc;
+        dateMap.get(dataPoint.date)![`${asset.assetId}_actual`] = dataPoint.price_in_btc;
       });
     });
 
     return Array.from(dateMap.values()).sort((a, b) => a.date.localeCompare(b.date));
-  }, [assetsData]);
+  }, [processedAssetsData]);
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
         <div className="bg-card border border-border p-3 rounded-lg shadow-lg">
           <p className="text-muted-foreground text-sm mb-2">{payload[0].payload.date}</p>
-          {payload.map((entry: any, index: number) => (
-            <p key={index} className="text-foreground font-mono text-sm" style={{ color: entry.color }}>
-              {entry.name}: {entry.value?.toFixed(6)} BTC
-            </p>
-          ))}
+          {payload.map((entry: any, index: number) => {
+            const actualKey = `${entry.dataKey}_actual`;
+            const actualValue = payload[0].payload[actualKey];
+            const normalizedValue = entry.value;
+            const percentChange = ((normalizedValue - 1) * 100).toFixed(2);
+            
+            return (
+              <div key={index} className="mb-1">
+                <p className="text-foreground font-mono text-sm font-semibold" style={{ color: entry.color }}>
+                  {entry.name}
+                </p>
+                <p className="text-muted-foreground text-xs ml-2">
+                  Normalized: {normalizedValue?.toFixed(4)} ({percentChange > '0' ? '+' : ''}{percentChange}%)
+                </p>
+                <p className="text-muted-foreground text-xs ml-2">
+                  Actual: {actualValue?.toFixed(6)} BTC
+                </p>
+              </div>
+            );
+          })}
         </div>
       );
     }
     return null;
   };
 
-  if (assetsData.length === 0) {
+  if (processedAssetsData.length === 0) {
     return (
       <Card className="p-6 bg-card border-border">
         <div className="h-[400px] flex items-center justify-center text-muted-foreground">
@@ -141,7 +182,7 @@ const ComparisonChart = ({ assetsData, selectedDate, viewMode, onViewModeChange 
               />
             )}
 
-            {assetsData.map((asset, index) => (
+            {processedAssetsData.map((asset, index) => (
               <Line
                 key={asset.assetId}
                 type="monotone"
@@ -188,10 +229,10 @@ const ComparisonChart = ({ assetsData, selectedDate, viewMode, onViewModeChange 
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {assetsData.map((asset, index) => (
+        {processedAssetsData.map((asset, index) => (
           <Card key={asset.assetId} className="p-6 bg-card border-border">
             <h3 className="text-md font-semibold mb-4 text-foreground">
-              {asset.assetName} / BTC
+              {asset.assetName} (Normalized)
             </h3>
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={asset.data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
@@ -208,19 +249,23 @@ const ComparisonChart = ({ assetsData, selectedDate, viewMode, onViewModeChange 
                 <YAxis
                   stroke="rgba(255, 255, 255, 0.3)"
                   tick={{ fill: "rgba(255, 255, 255, 0.7)", fontSize: 11 }}
-                  tickFormatter={(value) => value.toFixed(4)}
+                  tickFormatter={(value) => value.toFixed(2)}
                   domain={['auto', 'auto']}
                   tickCount={6}
                 />
                 <Tooltip
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
-                      const data = payload[0].payload;
+                      const data: any = payload[0].payload;
+                      const percentChange = ((data.normalized - 1) * 100).toFixed(2);
                       return (
                         <div className="bg-card border border-border p-2 rounded-lg shadow-lg">
                           <p className="text-muted-foreground text-xs">{data.date}</p>
                           <p className="text-foreground font-mono text-sm">
-                            {data.price_in_btc.toFixed(6)} BTC
+                            Normalized: {data.normalized?.toFixed(4)} ({percentChange > '0' ? '+' : ''}{percentChange}%)
+                          </p>
+                          <p className="text-muted-foreground text-xs">
+                            Actual: {data.price_in_btc.toFixed(6)} BTC
                           </p>
                         </div>
                       );
@@ -240,7 +285,7 @@ const ComparisonChart = ({ assetsData, selectedDate, viewMode, onViewModeChange 
 
                 <Line
                   type="monotone"
-                  dataKey="price_in_btc"
+                  dataKey="normalized"
                   stroke={ASSET_COLORS[index % ASSET_COLORS.length]}
                   strokeWidth={2}
                   dot={false}

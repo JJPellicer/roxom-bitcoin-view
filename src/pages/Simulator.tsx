@@ -247,11 +247,13 @@ const Simulator = () => {
 
         {/* Chart Section */}
         {mode === "compare" ? (
-          <ComparisonChart
+          <ComparisonChart 
             assetsData={comparisonData}
             selectedDate={selectedDate}
             viewMode={comparisonViewMode}
             onViewModeChange={setComparisonViewMode}
+            startDate={startDate}
+            endDate={endDate}
           />
         ) : (
           <div className="grid gap-8 lg:grid-cols-[1fr_300px]">
