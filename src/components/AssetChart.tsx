@@ -89,6 +89,12 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
       </h2>
       <ResponsiveContainer width="100%" height={400}>
         <LineChart data={chartData.allData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+          <defs>
+            <linearGradient id="confidenceBand" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#b388ff" stopOpacity={0.35}/>
+              <stop offset="100%" stopColor="#b388ff" stopOpacity={0.15}/>
+            </linearGradient>
+          </defs>
           
           <XAxis
             dataKey="date"
@@ -139,10 +145,8 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
             <Area
               type="monotone"
               dataKey="future_p75"
-              stroke="#fbbf24"
-              strokeWidth={1.5}
-              fill="#fbbf24"
-              fillOpacity={0.65}
+              stroke="none"
+              fill="url(#confidenceBand)"
               isAnimationActive={false}
             />
           )}
@@ -150,8 +154,7 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
             <Area
               type="monotone"
               dataKey="future_p25"
-              stroke="#fbbf24"
-              strokeWidth={1.5}
+              stroke="none"
               fill="hsl(var(--background))"
               isAnimationActive={false}
             />
@@ -195,8 +198,8 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
             <span>Median (P50)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-8 h-3 rounded" style={{ backgroundColor: "#fbbf24", opacity: 0.65, border: "1.5px solid #fbbf24" }} />
-            <span>P25-P75 Confidence Range</span>
+            <div className="w-8 h-3 rounded" style={{ backgroundColor: "rgba(179, 136, 255, 0.25)" }} />
+            <span>25th-75th Percentile Range</span>
           </div>
         </div>
       )}
