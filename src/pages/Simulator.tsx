@@ -8,6 +8,7 @@ import InsightsPanel from "@/components/InsightsPanel";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import roxomLogo from "@/assets/roxom-logo.png";
 
 export interface AssetData {
   date: string;
@@ -69,9 +70,12 @@ const Simulator = () => {
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to Home
           </Button>
-          <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-            LAMBDIC Simulator
-          </h1>
+          <div className="flex items-center gap-3">
+            <img src={roxomLogo} alt="Roxom" className="h-8" />
+            <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              BTC Simulator
+            </h1>
+          </div>
           <div className="w-32" />
         </div>
       </header>
