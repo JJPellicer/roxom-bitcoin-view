@@ -123,8 +123,8 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
         <LineChart data={chartData.allData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <defs>
             <linearGradient id="confidenceBand" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#b388ff" stopOpacity={0.35}/>
-              <stop offset="100%" stopColor="#b388ff" stopOpacity={0.15}/>
+              <stop offset="0%" stopColor="#b388ff" stopOpacity={0.45}/>
+              <stop offset="100%" stopColor="#b388ff" stopOpacity={0.25}/>
             </linearGradient>
           </defs>
           
@@ -155,6 +155,40 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
           />
           <Tooltip content={<CustomTooltip />} />
           
+          {/* Confidence band - MUST BE FIRST to appear behind the line */}
+          {chartData.hasConfidenceBands && showConfidenceBands && (
+            <>
+              <Area
+                type="monotone"
+                dataKey="future_p75"
+                stroke="none"
+                fill="url(#confidenceBand)"
+                isAnimationActive={false}
+              />
+              <Area
+                type="monotone"
+                dataKey="future_p25"
+                stroke="none"
+                fill="hsl(var(--background))"
+                isAnimationActive={false}
+              />
+            </>
+          )}
+          
+          {/* Main median line - on top of bands */}
+          <Line
+            type="monotone"
+            dataKey="price_in_btc"
+            stroke="#b388ff"
+            strokeWidth={3}
+            dot={false}
+            isAnimationActive={true}
+            connectNulls
+            style={{
+              filter: "drop-shadow(0 0 8px rgba(179, 136, 255, 0.5))",
+            }}
+          />
+          
           {/* Vertical line marking forecast start */}
           {chartData.forecastStartDate && (
             <ReferenceLine
@@ -171,41 +205,6 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
               }}
             />
           )}
-          
-          {/* Confidence band - P25 to P75 range for future data */}
-          {chartData.hasConfidenceBands && showConfidenceBands && (
-            <Area
-              type="monotone"
-              dataKey="future_p75"
-              stroke="none"
-              fill="url(#confidenceBand)"
-              isAnimationActive={false}
-            />
-          )}
-          {chartData.hasConfidenceBands && showConfidenceBands && (
-            <Area
-              type="monotone"
-              dataKey="future_p25"
-              stroke="none"
-              fill="hsl(var(--background))"
-              isAnimationActive={false}
-            />
-          )}
-          
-          {/* Main median line */}
-          <Line
-            type="monotone"
-            dataKey="price_in_btc"
-            stroke="#b388ff"
-            strokeWidth={3}
-            dot={false}
-            isAnimationActive={true}
-            connectNulls
-            style={{
-              filter: "drop-shadow(0 0 8px rgba(179, 136, 255, 0.5))",
-            }}
-          />
-          
 
           {/* Selected point */}
           {chartData.selectedPoint && (
@@ -224,25 +223,25 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
         </LineChart>
       </ResponsiveContainer>
       {chartData.hasConfidenceBands && (
-        <div className="mt-4 flex items-center gap-6 text-xs text-muted-foreground">
+        <div className="mt-4 pt-4 border-t border-border flex items-center gap-6 text-sm">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-0.5 rounded" style={{ backgroundColor: "#b388ff", boxShadow: "0 0 4px rgba(179, 136, 255, 0.5)" }} />
-            <span>Median (P50)</span>
+            <div className="w-10 h-0.5 rounded" style={{ backgroundColor: "#b388ff", boxShadow: "0 0 4px rgba(179, 136, 255, 0.5)" }} />
+            <span className="text-foreground font-medium">Median (P50)</span>
           </div>
           {showConfidenceBands && (
             <div className="flex items-center gap-2">
-              <div className="w-8 h-3 rounded" style={{ backgroundColor: "rgba(179, 136, 255, 0.25)" }} />
-              <span>25th-75th Percentile Range</span>
+              <div className="w-10 h-4 rounded" style={{ backgroundColor: "rgba(179, 136, 255, 0.35)" }} />
+              <span className="text-foreground font-medium">25th-75th Percentile Range</span>
               <TooltipProvider>
                 <UITooltip>
                   <TooltipTrigger asChild>
-                    <button className="inline-flex items-center">
-                      <Info className="w-4 h-4 ml-1 text-muted-foreground hover:text-foreground transition-colors" />
+                    <button className="inline-flex items-center ml-1 p-1 rounded hover:bg-accent transition-colors">
+                      <Info className="w-4 h-4 text-primary" />
                     </button>
                   </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">
-                    <p className="font-semibold mb-1">Forecast Uncertainty</p>
-                    <p className="text-xs">
+                  <TooltipContent className="max-w-xs" side="top">
+                    <p className="font-semibold mb-1.5">Forecast Uncertainty</p>
+                    <p className="text-xs leading-relaxed">
                       The shaded area shows the 25th to 75th percentile range, meaning 50% of possible outcomes fall within this band. 
                       A wider band indicates higher uncertainty, while a narrower band suggests more confidence in the forecast.
                     </p>
