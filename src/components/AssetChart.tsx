@@ -100,11 +100,16 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
     );
   }
 
+  const stockTickers = ['mstr', 'mara', 'gme', 'smlr', 'naka'];
+  const formattedAssetName = stockTickers.includes(assetName.toLowerCase()) 
+    ? assetName.toUpperCase() 
+    : assetName.charAt(0).toUpperCase() + assetName.slice(1);
+
   return (
     <Card className="p-6 bg-card border-border">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-foreground">
-          {assetName} Priced in Bitcoin
+          {formattedAssetName} Priced in Bitcoin
         </h2>
         {chartData.hasConfidenceBands && (
           <TooltipProvider>
