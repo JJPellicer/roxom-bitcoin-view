@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceDot, ReferenceLine, Area } from "recharts";
+import { ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceDot, ReferenceLine, Area } from "recharts";
 import { AssetData } from "@/pages/Simulator";
 import { Info, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -32,29 +32,37 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
     const forecastStartIndex = data.findIndex(d => d.future_p25 !== undefined);
     const forecastStartDate = forecastStartIndex >= 0 ? data[forecastStartIndex].date : null;
 
+    // Transform data to include band width for proper rendering
+    const transformedData = data.map(d => ({
+      ...d,
+      bandWidth: (d.future_p25 !== undefined && d.future_p75 !== undefined) 
+        ? d.future_p75 - d.future_p25 
+        : undefined
+    }));
+
     if (!selectedDate) {
       return { 
-        allData: data, 
+        allData: transformedData, 
         selectedPoint: null, 
         hasConfidenceBands,
         forecastStartDate 
       };
     }
 
-    const selectedIndex = data.findIndex((d) => d.date === selectedDate);
+    const selectedIndex = transformedData.findIndex((d) => d.date === selectedDate);
     if (selectedIndex === -1) {
       return { 
-        allData: data, 
+        allData: transformedData, 
         selectedPoint: null, 
         hasConfidenceBands,
         forecastStartDate 
       };
     }
 
-    const selectedPoint = data[selectedIndex];
+    const selectedPoint = transformedData[selectedIndex];
 
     return { 
-      allData: data, 
+      allData: transformedData, 
       selectedPoint, 
       hasConfidenceBands,
       forecastStartDate 
@@ -120,7 +128,7 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
         )}
       </div>
       <ResponsiveContainer width="100%" height={400}>
-        <LineChart data={chartData.allData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+        <ComposedChart data={chartData.allData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <defs>
             <linearGradient id="confidenceBand" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#b388ff" stopOpacity={0.45}/>
@@ -155,21 +163,23 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
           />
           <Tooltip content={<CustomTooltip />} />
           
-          {/* Confidence band - MUST BE FIRST to appear behind the line */}
+          {/* Confidence band - rendered as stacked areas */}
           {chartData.hasConfidenceBands && showConfidenceBands && (
             <>
               <Area
                 type="monotone"
-                dataKey="future_p75"
+                dataKey="future_p25"
+                stackId="confidenceBand"
                 stroke="none"
-                fill="url(#confidenceBand)"
+                fill="transparent"
                 isAnimationActive={false}
               />
               <Area
                 type="monotone"
-                dataKey="future_p25"
+                dataKey="bandWidth"
+                stackId="confidenceBand"
                 stroke="none"
-                fill="hsl(var(--background))"
+                fill="url(#confidenceBand)"
                 isAnimationActive={false}
               />
             </>
@@ -220,7 +230,7 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
               }}
             />
           )}
-        </LineChart>
+        </ComposedChart>
       </ResponsiveContainer>
       {chartData.hasConfidenceBands && (
         <div className="mt-4 pt-4 border-t border-border flex items-center gap-6 text-sm">
