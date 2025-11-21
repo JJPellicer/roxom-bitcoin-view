@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceDot, ReferenceLine, Area } from "recharts";
 import { AssetData } from "@/pages/Simulator";
-import { Info } from "lucide-react";
+import { Info, Eye, EyeOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Tooltip as UITooltip,
   TooltipContent,
@@ -17,6 +18,8 @@ interface AssetChartProps {
 }
 
 const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
+  const [showConfidenceBands, setShowConfidenceBands] = useState(true);
+  
   const chartData = useMemo(() => {
     if (!data.length) return { 
       allData: [], 
@@ -91,9 +94,31 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
 
   return (
     <Card className="p-6 bg-card border-border">
-      <h2 className="text-lg font-semibold mb-4 text-foreground">
-        {assetName} Priced in Bitcoin
-      </h2>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-lg font-semibold text-foreground">
+          {assetName} Priced in Bitcoin
+        </h2>
+        {chartData.hasConfidenceBands && (
+          <TooltipProvider>
+            <UITooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowConfidenceBands(!showConfidenceBands)}
+                  className="gap-2"
+                >
+                  {showConfidenceBands ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                  {showConfidenceBands ? "Hide" : "Show"} Bands
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">Toggle forecast uncertainty bands</p>
+              </TooltipContent>
+            </UITooltip>
+          </TooltipProvider>
+        )}
+      </div>
       <ResponsiveContainer width="100%" height={400}>
         <LineChart data={chartData.allData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <defs>
@@ -148,7 +173,7 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
           )}
           
           {/* Confidence band - P25 to P75 range for future data */}
-          {chartData.hasConfidenceBands && (
+          {chartData.hasConfidenceBands && showConfidenceBands && (
             <Area
               type="monotone"
               dataKey="future_p75"
@@ -157,7 +182,7 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
               isAnimationActive={false}
             />
           )}
-          {chartData.hasConfidenceBands && (
+          {chartData.hasConfidenceBands && showConfidenceBands && (
             <Area
               type="monotone"
               dataKey="future_p25"
@@ -204,24 +229,28 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
             <div className="w-8 h-0.5 rounded" style={{ backgroundColor: "#b388ff", boxShadow: "0 0 4px rgba(179, 136, 255, 0.5)" }} />
             <span>Median (P50)</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-3 rounded" style={{ backgroundColor: "rgba(179, 136, 255, 0.25)" }} />
-            <span>25th-75th Percentile Range</span>
-            <TooltipProvider>
-              <UITooltip>
-                <TooltipTrigger asChild>
-                  <Info className="w-3.5 h-3.5 cursor-help" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  <p className="font-semibold mb-1">Forecast Uncertainty</p>
-                  <p className="text-xs">
-                    The shaded area shows the 25th to 75th percentile range, meaning 50% of possible outcomes fall within this band. 
-                    A wider band indicates higher uncertainty, while a narrower band suggests more confidence in the forecast.
-                  </p>
-                </TooltipContent>
-              </UITooltip>
-            </TooltipProvider>
-          </div>
+          {showConfidenceBands && (
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-3 rounded" style={{ backgroundColor: "rgba(179, 136, 255, 0.25)" }} />
+              <span>25th-75th Percentile Range</span>
+              <TooltipProvider>
+                <UITooltip>
+                  <TooltipTrigger asChild>
+                    <button className="inline-flex items-center">
+                      <Info className="w-4 h-4 ml-1 text-muted-foreground hover:text-foreground transition-colors" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p className="font-semibold mb-1">Forecast Uncertainty</p>
+                    <p className="text-xs">
+                      The shaded area shows the 25th to 75th percentile range, meaning 50% of possible outcomes fall within this band. 
+                      A wider band indicates higher uncertainty, while a narrower band suggests more confidence in the forecast.
+                    </p>
+                  </TooltipContent>
+                </UITooltip>
+              </TooltipProvider>
+            </div>
+          )}
         </div>
       )}
     </Card>
