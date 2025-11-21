@@ -2,6 +2,13 @@ import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceDot, ReferenceLine, Area } from "recharts";
 import { AssetData } from "@/pages/Simulator";
+import { Info } from "lucide-react";
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface AssetChartProps {
   data: AssetData[];
@@ -200,6 +207,20 @@ const AssetChart = ({ data, assetName, selectedDate }: AssetChartProps) => {
           <div className="flex items-center gap-2">
             <div className="w-8 h-3 rounded" style={{ backgroundColor: "rgba(179, 136, 255, 0.25)" }} />
             <span>25th-75th Percentile Range</span>
+            <TooltipProvider>
+              <UITooltip>
+                <TooltipTrigger asChild>
+                  <Info className="w-3.5 h-3.5 cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p className="font-semibold mb-1">Forecast Uncertainty</p>
+                  <p className="text-xs">
+                    The shaded area shows the 25th to 75th percentile range, meaning 50% of possible outcomes fall within this band. 
+                    A wider band indicates higher uncertainty, while a narrower band suggests more confidence in the forecast.
+                  </p>
+                </TooltipContent>
+              </UITooltip>
+            </TooltipProvider>
           </div>
         </div>
       )}
