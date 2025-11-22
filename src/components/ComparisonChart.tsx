@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from "recharts";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from "recharts";
 import { AssetData } from "@/pages/Simulator";
 import { LayoutGrid, Layers } from "lucide-react";
 
@@ -32,15 +32,12 @@ const ComparisonChart = ({ assetsData, selectedDate, viewMode, onViewModeChange,
         filteredData = asset.data.filter(d => d.date >= startDate && d.date <= endDate);
       }
       
-      // Normalize to start at 1 and add confidence band data
+      // Normalize to start at 1
       if (filteredData.length > 0) {
         const firstValue = filteredData[0].price_in_btc;
         const normalizedData = filteredData.map(d => ({
           ...d,
           normalized: d.price_in_btc / firstValue,
-          normalized_p25: d.future_p25 ? d.future_p25 / firstValue : undefined,
-          normalized_p75: d.future_p75 ? d.future_p75 / firstValue : undefined,
-          bandWidth: (d.future_p25 && d.future_p75) ? (d.future_p75 - d.future_p25) / firstValue : undefined,
         }));
         return { ...asset, data: normalizedData };
       }
@@ -62,8 +59,6 @@ const ComparisonChart = ({ assetsData, selectedDate, viewMode, onViewModeChange,
         }
         dateMap.get(dataPoint.date)![asset.assetId] = dataPoint.normalized || dataPoint.price_in_btc;
         dateMap.get(dataPoint.date)![`${asset.assetId}_actual`] = dataPoint.price_in_btc;
-        dateMap.get(dataPoint.date)![`${asset.assetId}_p25`] = dataPoint.normalized_p25;
-        dateMap.get(dataPoint.date)![`${asset.assetId}_bandWidth`] = dataPoint.bandWidth;
       });
     });
 
@@ -140,15 +135,7 @@ const ComparisonChart = ({ assetsData, selectedDate, viewMode, onViewModeChange,
         </div>
         
         <ResponsiveContainer width="100%" height={500}>
-          <ComposedChart data={mergedData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <defs>
-              {processedAssetsData.map((asset, index) => (
-                <linearGradient key={`gradient-${asset.assetId}`} id={`confidenceBand-${asset.assetId}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={ASSET_COLORS[index % ASSET_COLORS.length]} stopOpacity={0.15} />
-                  <stop offset="100%" stopColor={ASSET_COLORS[index % ASSET_COLORS.length]} stopOpacity={0.05} />
-                </linearGradient>
-              ))}
-            </defs>
+          <LineChart data={mergedData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <XAxis
               dataKey="date"
               stroke="rgba(255, 255, 255, 0.3)"
@@ -196,31 +183,6 @@ const ComparisonChart = ({ assetsData, selectedDate, viewMode, onViewModeChange,
             )}
 
             {processedAssetsData.map((asset, index) => (
-              <Area
-                key={`${asset.assetId}-p25`}
-                type="monotone"
-                dataKey={`${asset.assetId}_p25`}
-                stroke="none"
-                fill="transparent"
-                isAnimationActive={false}
-                connectNulls
-              />
-            ))}
-
-            {processedAssetsData.map((asset, index) => (
-              <Area
-                key={`${asset.assetId}-band`}
-                type="monotone"
-                dataKey={`${asset.assetId}_bandWidth`}
-                stroke="none"
-                fill={`url(#confidenceBand-${asset.assetId})`}
-                stackId={asset.assetId}
-                isAnimationActive={false}
-                connectNulls
-              />
-            ))}
-
-            {processedAssetsData.map((asset, index) => (
               <Line
                 key={asset.assetId}
                 type="monotone"
@@ -233,7 +195,7 @@ const ComparisonChart = ({ assetsData, selectedDate, viewMode, onViewModeChange,
                 connectNulls
               />
             ))}
-          </ComposedChart>
+          </LineChart>
         </ResponsiveContainer>
       </Card>
     );
@@ -273,13 +235,7 @@ const ComparisonChart = ({ assetsData, selectedDate, viewMode, onViewModeChange,
               {asset.assetName} (Normalized)
             </h3>
             <ResponsiveContainer width="100%" height={300}>
-              <ComposedChart data={asset.data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-                <defs>
-                  <linearGradient id={`confidenceBand-separate-${asset.assetId}`} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={ASSET_COLORS[index % ASSET_COLORS.length]} stopOpacity={0.3} />
-                    <stop offset="100%" stopColor={ASSET_COLORS[index % ASSET_COLORS.length]} stopOpacity={0.1} />
-                  </linearGradient>
-                </defs>
+              <LineChart data={asset.data} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                 <XAxis
                   dataKey="date"
                   stroke="rgba(255, 255, 255, 0.3)"
@@ -327,25 +283,6 @@ const ComparisonChart = ({ assetsData, selectedDate, viewMode, onViewModeChange,
                   />
                 )}
 
-                <Area
-                  type="monotone"
-                  dataKey="normalized_p25"
-                  stroke="none"
-                  fill="transparent"
-                  isAnimationActive={false}
-                  connectNulls
-                />
-
-                <Area
-                  type="monotone"
-                  dataKey="bandWidth"
-                  stroke="none"
-                  fill={`url(#confidenceBand-separate-${asset.assetId})`}
-                  stackId="band"
-                  isAnimationActive={false}
-                  connectNulls
-                />
-
                 <Line
                   type="monotone"
                   dataKey="normalized"
@@ -357,7 +294,7 @@ const ComparisonChart = ({ assetsData, selectedDate, viewMode, onViewModeChange,
                     filter: `drop-shadow(0 0 8px ${ASSET_COLORS[index % ASSET_COLORS.length]}80)`,
                   }}
                 />
-              </ComposedChart>
+              </LineChart>
             </ResponsiveContainer>
           </Card>
         ))}
